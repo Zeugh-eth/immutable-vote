@@ -1,36 +1,58 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# ENS Vote
 
-## Getting Started
+Minimal IPFS-ready governance interface for ENS DAO.
 
-First, run the development server:
+## What Works
+
+- ✅ Proposals list from Gateful REST API
+- ✅ Wallet connect (RainbowKit)
+- ✅ Static export (`npm run build` → `out/`)
+- ✅ 8MB build size
+- ✅ Clean, typed codebase
+
+## Stack
+
+- **Next.js 16** (App Router, Turbopack)
+- **TypeScript** + **Tailwind CSS**
+- **RainbowKit** + **wagmi** + **viem** (wallet + chain interaction)
+- **TanStack Query** (data fetching)
+- **Gateful REST API** (proposals data)
+
+## Dev
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## Build
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+```bash
+npm run build
+# Static site in out/
+```
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+## Deploy to IPFS
 
-## Learn More
+```bash
+npm run build
+ipfs add -r --cid-version=1 out/
+# Update ENS content hash with CID
+```
 
-To learn more about Next.js, take a look at the following resources:
+## Env Vars (optional)
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+```bash
+NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID=your_project_id
+NEXT_PUBLIC_ALCHEMY_KEY=your_alchemy_key
+NEXT_PUBLIC_API_URL=https://gateful.up.railway.app
+```
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## TODO
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- [ ] Proposal detail page
+- [ ] Vote casting (castVote + castVoteWithReason)
+- [ ] Voting power display
+- [ ] Vote status (has voted check)
+- [ ] Markdown rendering for descriptions
+- [ ] Votes list on detail page
