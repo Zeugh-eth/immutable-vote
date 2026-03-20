@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { StatusBadge } from './StatusBadge';
 
 interface Proposal {
   id: string;
@@ -25,18 +26,9 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
         <h3 className="text-lg font-semibold text-gray-900 flex-1">
           {proposal.title}
         </h3>
-        <span
-          className={`ml-4 px-3 py-1 rounded-full text-sm font-medium ${
-            proposal.status === 'ACTIVE'
-              ? 'bg-green-100 text-green-800'
-              : proposal.status === 'EXECUTED'
-              ? 'bg-blue-100 text-blue-800'
-              : 'bg-gray-100 text-gray-800'
-          }`}
-          aria-label={`Status: ${proposal.status}`}
-        >
-          {proposal.status}
-        </span>
+        <div className="ml-4">
+          <StatusBadge status={proposal.status} />
+        </div>
       </div>
 
       <div className="flex items-center gap-6 text-sm text-gray-600 mt-4">
