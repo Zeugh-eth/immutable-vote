@@ -11,3 +11,30 @@ Started: 2026-03-20 22:43 UTC
 - Vote Support Values: 0=against, 1=for, 2=abstain
 
 ---
+
+## [2026-03-20 22:55 UTC] US-001 - Fix Clickable Proposals - ✅ COMPLETE
+
+**TDD Cycle Completed:**
+- RED: Created failing tests for clickable proposal cards
+- GREEN: Implemented Link wrapper with hover states  
+- REFACTOR: Extracted ProposalCard component with accessibility improvements
+
+**Changes:**
+- Setup Jest + React Testing Library testing infrastructure
+- Created 3 tests: clickable links, navigation, hover cursor
+- Wrapped proposal cards in Next.js Link components
+- Added hover styles: cursor-pointer + bg-gray-50
+- Extracted ProposalCard component for reusability
+- Added accessibility: aria-labels, semantic HTML (<time>)
+
+**All Acceptance Criteria Met:**
+✅ Proposal cards are Link components to /proposal/[id]
+✅ Hover state shows cursor:pointer and bg-gray-50
+✅ Clicking navigates to detail page  
+✅ Tests pass (3/3)
+✅ Typecheck passes (npm run build)
+
+**Commits:**
+- a3a7c35: test: US-001 - add tests for clickable proposals
+- a6637e4: feat: US-001 - make proposals clickable
+
