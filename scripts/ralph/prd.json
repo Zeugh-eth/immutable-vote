@@ -1,0 +1,179 @@
+{
+  "project": "ImmutableVote",
+  "branchName": "ralph/ipfs-static-export",
+  "description": "Convert Anticapture dashboard to a fully static IPFS-hostable frontend for eth.limo",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Configure Next.js for static export",
+      "description": "As a developer, I need the project to produce a static HTML/JS/CSS build that can be deployed to IPFS.",
+      "acceptanceCriteria": [
+        "next.config.mjs has output: 'export' set",
+        "All next/image usages replaced with <img> or next/image with unoptimized: true",
+        "All API routes removed (app/api/ directory deleted or emptied)",
+        "Server-side redirects converted to client-side or removed",
+        "next build produces a static out/ directory with all pages",
+        "No getServerSideProps or server-only imports remain",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false,
+      "notes": "This is the foundation — everything else depends on the build working. next/image is used across many components, may need a find-and-replace pass."
+    },
+    {
+      "id": "US-002",
+      "title": "Implement Gateful REST data fetching layer",
+      "description": "As a developer, I need a clean data layer that fetches from the Gateful REST API so the app works without the GraphQL API Gateway.",
+      "acceptanceCriteria": [
+        "Create shared/data/ directory with typed API client for Gateful REST endpoints",
+        "Implement typed fetch functions for: /{daoId}/proposals, /{daoId}/token, /{daoId}/treasury/liquid, /{daoId}/feed/events, /{daoId}/accounts/{address}/delegations, /{daoId}/token/historical-data, and compare endpoints",
+        "Replace Apollo Client with TanStack Query (already a dependency) + native fetch for REST calls",
+        "Remove @anticapture/graphql-client workspace dependency from dashboard",
+        "Create React hooks (useProposals, useToken, useTreasury, useFeedEvents, useDelegations, etc.) wrapping the REST client with TanStack Query",
+        "Config allows setting Gateful API base URL at build time via NEXT_PUBLIC_BASE_URL env var",
+        "All data types are defined matching actual Gateful API response shapes",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false,
+      "notes": "Gateful is a REST API at https://gateful.up.railway.app with CORS enabled. Supported DAOs: ens, uni, comp, nouns, gtc, obol, scr (NOT op). Apollo Client and graphql-client package should be fully removed."
+    },
+    {
+      "id": "US-003",
+      "title": "Remove server-side dependencies",
+      "description": "As a developer, I need to strip all server-only code so the static export build succeeds.",
+      "acceptanceCriteria": [
+        "app/api/contact/ route removed, contact page uses mailto: link",
+        "app/api/figma/ route removed",
+        "resend package removed from production dependencies",
+        "Server-only env vars no longer referenced at runtime",
+        "next.config.mjs redirects replaced with client-side redirect component or removed",
+        "serverExternalPackages config removed from next.config.mjs",
+        "Build completes with output: 'export' without errors",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false,
+      "notes": "Must come after US-001 (static export config). Server env vars: RESEND_API_KEY, FIGMA_TOKEN, CONTACT_EMAIL, ALLOWED_ORIGINS, VERCEL_URL."
+    },
+    {
+      "id": "US-004",
+      "title": "Static path generation for DAO pages",
+      "description": "As a user, I want to access each DAO dashboard via a clean URL that works on IPFS.",
+      "acceptanceCriteria": [
+        "generateStaticParams implemented for [daoId] routes returning all 8 DAOs from dao-config",
+        "Each DAO main page and all sub-pages are pre-rendered at build time",
+        "out/ directory contains HTML files for every DAO route (e.g. out/ens/index.html)",
+        "Proposal detail pages use client-side catch-all route since proposalIds are dynamic",
+        "404 page renders for unknown DAOs",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": false,
+      "notes": "DAOs supported by Gateful: ENS, UNI, COMP, NOUNS, GTC, OBOL, SCR (NOT OP — returns 404). Sub-pages: attack-profitability, holders-and-delegates, resilience-stages, risk-analysis, token-distribution, governance. Proposal pages are dynamic — cannot pre-render all IDs."
+    },
+    {
+      "id": "US-005",
+      "title": "Fix asset paths for IPFS compatibility",
+      "description": "As a user accessing the site via IPFS gateway, I need all assets to load correctly.",
+      "acceptanceCriteria": [
+        "next.config.mjs configured for IPFS-compatible relative asset paths",
+        "All static assets in public/ referenced with relative paths",
+        "No hardcoded absolute URLs to localhost or specific domains for assets",
+        "Google Fonts replaced with self-hosted Inter font in public/fonts/",
+        "Built out/ directory serves correctly via npx serve out",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false,
+      "notes": "IPFS gateways serve content at varying path depths. Relative paths (./ or no leading /) are safest. next/font may not work with static export — test and replace if needed."
+    },
+    {
+      "id": "US-006",
+      "title": "Client-side analytics replacement",
+      "description": "As a developer, I need analytics to work without server-side code or be gracefully disabled.",
+      "acceptanceCriteria": [
+        "PostHog uses client-side-only SDK or is removed",
+        "Umami uses client-side script tag or is removed",
+        "No analytics code causes build failures or runtime errors",
+        "Analytics can be enabled/disabled via build-time env var",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false,
+      "notes": "PostHog and Umami are in shared/services/. Check if they already use client-only patterns or need conversion."
+    },
+    {
+      "id": "US-007",
+      "title": "Contact and donation pages — static conversion",
+      "description": "As a user, I want informational pages to work without server APIs.",
+      "acceptanceCriteria": [
+        "Contact page uses mailto: link instead of API route form submission",
+        "Donation page works fully client-side (wallet interaction already is)",
+        "FAQ, glossary, and terms pages render as static pages",
+        "All informational pages accessible and correct in static build",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false,
+      "notes": "Low risk story. Most of these pages are already mostly static. Contact form is the main change."
+    },
+    {
+      "id": "US-008",
+      "title": "IPFS deployment script",
+      "description": "As a developer, I need a one-command deployment script to build and pin to IPFS.",
+      "acceptanceCriteria": [
+        "scripts/deploy-ipfs.sh builds the project and pins out/ to IPFS",
+        "Script supports both local ipfs CLI and Pinata API",
+        "Script prints the CID and eth.limo URL for verification",
+        "README documents full deployment flow including ENS content hash update",
+        ".env.example updated with all required build-time env vars",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false,
+      "notes": "Use ipfs add -r --cid-version=1 for CIDv1 (base32) which is needed for ENS content hash. Pinata is backup for CI/CD."
+    },
+    {
+      "id": "US-009",
+      "title": "Smoke test — full static build verification",
+      "description": "As a developer, I need automated tests verifying the static build works end-to-end.",
+      "acceptanceCriteria": [
+        "Test script builds project with next build",
+        "Verifies out/ directory exists with expected structure",
+        "Serves out/ with local HTTP server and checks key pages return 200",
+        "Verifies no broken asset references in generated HTML",
+        "Runnable in CI via npm run test:smoke",
+        "Typecheck passes",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false,
+      "notes": "This is the final safety net. Should check: home page, at least 2 DAO pages, 404 page, asset files exist."
+    },
+    {
+      "id": "US-010",
+      "title": "README and documentation",
+      "description": "As a developer or contributor, I need clear docs for Immutable Vote.",
+      "acceptanceCriteria": [
+        "README.md rewritten for Immutable Vote project",
+        "Documents: prerequisites, local dev, static build, IPFS deployment, ENS setup",
+        "Explains data provider abstraction and how to swap backends",
+        "Lists all build-time env vars with descriptions",
+        "Includes text-based architecture diagram",
+        "Typecheck passes"
+      ],
+      "priority": 10,
+      "passes": false,
+      "notes": "Final story. All other work should be complete before this is finalized."
+    }
+  ]
+}
