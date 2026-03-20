@@ -1,0 +1,199 @@
+{
+  "project": "ENS-Vote-Complete",
+  "branchName": "feat/governance-interface",
+  "description": "Complete governance interface with voting, vote viewing, and simple fast design",
+  "userStories": [
+    {
+      "id": "US-001",
+      "title": "Fix clickable proposals",
+      "description": "Make proposal cards clickable links that navigate to detail page",
+      "acceptanceCriteria": [
+        "Proposal cards are <Link> components to /proposal/[id]",
+        "Hover state shows cursor:pointer and subtle bg change",
+        "Clicking navigates to detail page",
+        "Tests pass"
+      ],
+      "priority": 1,
+      "passes": false
+    },
+    {
+      "id": "US-002",
+      "title": "Proposal detail - basic shell",
+      "description": "Create proposal detail page with basic info",
+      "acceptanceCriteria": [
+        "Route /proposal/[id] exists as client component",
+        "Fetches proposal from Gateful using useQuery",
+        "Shows title, proposer, status badge",
+        "Back button links to proposals list",
+        "Loading skeleton while fetching",
+        "Error state for 404/failed fetch",
+        "Tests pass"
+      ],
+      "priority": 2,
+      "passes": false
+    },
+    {
+      "id": "US-003",
+      "title": "Vote counts and progress bars",
+      "description": "Visual display of vote results with bars and percentages",
+      "acceptanceCriteria": [
+        "For/Against/Abstain counts formatted (488K, 1.44M using Intl.NumberFormat)",
+        "Vote percentages calculated and displayed",
+        "Visual progress bars (green=for 🟩, red=against 🟥, gray=abstain ⬜)",
+        "Bars stack horizontally to 100% width using flexbox",
+        "High contrast colors (readable on white bg)",
+        "Tests pass"
+      ],
+      "priority": 3,
+      "passes": false
+    },
+    {
+      "id": "US-004",
+      "title": "Status and time indicators",
+      "description": "Show proposal status and timing clearly",
+      "acceptanceCriteria": [
+        "Status badge component (Ongoing/Executed/PendingExecution/Defeated/Cancelled)",
+        "Color-coded: green=Ongoing, blue=Executed, yellow=Pending, red=Defeated, gray=Cancelled",
+        "Time remaining for active (endTimestamp - now in days/hours)",
+        "Time ago for completed (timestamp - now in days/hours)",
+        "Created/Started/Ends timestamps formatted",
+        "Tests pass"
+      ],
+      "priority": 4,
+      "passes": false
+    },
+    {
+      "id": "US-005",
+      "title": "Wallet connect and voting power",
+      "description": "Display user's voting power from ENS Governor",
+      "acceptanceCriteria": [
+        "useAccount hook from wagmi shows connected address",
+        "useReadContract reads getVotes(address) from ENS Governor 0x323a...",
+        "Formats voting power (e.g., 123.45K or 1.2M)",
+        "Shows 'Your VP: X' on proposal detail page",
+        "Updates when wallet connects/disconnects",
+        "Tests pass"
+      ],
+      "priority": 5,
+      "passes": false
+    },
+    {
+      "id": "US-006",
+      "title": "Vote buttons and transaction",
+      "description": "Cast votes on active proposals",
+      "acceptanceCriteria": [
+        "Vote buttons (For/Against/Abstain) on proposal detail",
+        "Only visible when wallet connected AND proposal status=ACTIVE",
+        "Read hasVoted(proposalId, address) from governor to check if user voted",
+        "If voted, show 'You voted: [direction]' instead of buttons",
+        "Clicking calls writeContract with castVote(proposalId, support)",
+        "support: 1=for, 0=against, 2=abstain",
+        "Show loading state during tx (disable buttons, spinner)",
+        "On success: show toast, refetch proposal data",
+        "On error: show error toast with reason",
+        "Tests pass"
+      ],
+      "priority": 6,
+      "passes": false
+    },
+    {
+      "id": "US-007",
+      "title": "Vote reason (optional comment)",
+      "description": "Allow voters to add a comment when voting",
+      "acceptanceCriteria": [
+        "Textarea below vote buttons: 'Add comment (optional)'",
+        "Character limit: 280 chars with counter",
+        "If filled, use castVoteWithReason(proposalId, support, reason) instead",
+        "Empty = use castVote (no reason)",
+        "Tests pass"
+      ],
+      "priority": 7,
+      "passes": false
+    },
+    {
+      "id": "US-008",
+      "title": "Votes tab - list of voters",
+      "description": "Show who voted and how in a table",
+      "acceptanceCriteria": [
+        "Tab navigation component (Description active by default, Votes, Actions)",
+        "Votes tab fetches /ens/proposals/{id}/votes from Gateful",
+        "HTML table with: Voter, Direction, Amount, Time columns",
+        "Voter: ENS name if available else truncated address (0x1234...5678)",
+        "Direction: ✅ For, ❌ Against, ➖ Abstain (based on support value)",
+        "Amount: voting power formatted (e.g., 488.14K)",
+        "Time: relative (2d ago) or absolute",
+        "Pagination: 20 per page, prev/next buttons",
+        "Tests pass"
+      ],
+      "priority": 8,
+      "passes": false
+    },
+    {
+      "id": "US-009",
+      "title": "Actions tab - calldata display",
+      "description": "Show proposal executable actions",
+      "acceptanceCriteria": [
+        "Actions tab shows targets[], values[], calldatas[] from proposal",
+        "HTML table: #, Target, Value (ETH), Calldata columns",
+        "Target: full address with copy button",
+        "Value: formatted as ETH (e.g., 0.5 ETH) using formatEther",
+        "Calldata: truncated to 50 chars with 'Expand' button to show full",
+        "Each action numbered (#1, #2, etc.)",
+        "Tests pass"
+      ],
+      "priority": 9,
+      "passes": false
+    },
+    {
+      "id": "US-010",
+      "title": "Description tab - markdown rendering",
+      "description": "Render proposal description with proper formatting",
+      "acceptanceCriteria": [
+        "Install react-markdown",
+        "Description tab renders proposal.description as markdown",
+        "Headings styled (h1-h6 with font sizes)",
+        "Tables: bordered, padded cells",
+        "Code blocks: monospace font, light gray bg",
+        "Lists: proper bullets/numbers",
+        "Links: blue, underlined, target=_blank",
+        "Tests pass"
+      ],
+      "priority": 10,
+      "passes": false
+    },
+    {
+      "id": "US-011",
+      "title": "Quorum indicator",
+      "description": "Show quorum progress for proposals that require it",
+      "acceptanceCriteria": [
+        "Calculate total votes: forVotes + againstVotes + abstainVotes",
+        "Compare to proposal.quorum",
+        "Show 'Quorum: 488K / 1M' with progress bar",
+        "Bar fills based on (total/quorum * 100)%",
+        "Color: gray if < 100%, green if >= 100%",
+        "Only show if proposal.quorum > 0",
+        "Tests pass"
+      ],
+      "priority": 11,
+      "passes": false
+    },
+    {
+      "id": "US-012",
+      "title": "Simple fast styling",
+      "description": "Optimize for speed and simplicity",
+      "acceptanceCriteria": [
+        "tailwind.config.js: minimal config, only used utilities",
+        "Use system font stack: font-sans: ui-sans-serif, system-ui, sans-serif",
+        "Remove unused Tailwind classes (purge properly)",
+        "HTML <table> for votes/actions (not divs)",
+        "No animations except loading spinners",
+        ":hover states: bg-gray-50 for clickables",
+        "High contrast text: text-gray-900 on white",
+        "Build output CSS < 20KB",
+        "Tests pass"
+      ],
+      "priority": 12,
+      "passes": false
+    }
+  ]
+}

@@ -1,0 +1,13 @@
+# Ralph Progress Log (TDD Mode)
+Started: 2026-03-20 22:43 UTC
+
+## Codebase Patterns
+
+- Testing: Use @testing-library/react with Jest for component tests
+- Data Fetching: TanStack Query hooks wrap Gateful API calls
+- Wallet: wagmi useReadContract for ENS Governor on-chain reads, useWriteContract for votes
+- Formatting: Intl.NumberFormat for large numbers (488K, 1.44M)
+- ENS Governor: 0x323a76393544d5ecca80cd6ef2a560c6a395b7e3
+- Vote Support Values: 0=against, 1=for, 2=abstain
+
+---
