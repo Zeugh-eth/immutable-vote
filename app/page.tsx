@@ -44,10 +44,9 @@ export default function ProposalsPage() {
         {data && (
           <div className="space-y-4">
             {data.items.map((proposal) => (
-              <Link
+              <div
                 key={proposal.id}
-                href={`/proposal/${proposal.id}`}
-                className="block bg-white rounded-lg shadow hover:shadow-md transition-shadow border border-gray-200 p-6"
+                className="block bg-white rounded-lg shadow border border-gray-200 p-6"
               >
                 <div className="flex items-start justify-between mb-2">
                   <h3 className="text-lg font-semibold text-gray-900 flex-1">
@@ -90,7 +89,7 @@ export default function ProposalsPage() {
                 <div className="text-xs text-gray-500 mt-2">
                   Proposed {new Date(proposal.timestamp * 1000).toLocaleDateString()}
                 </div>
-              </Link>
+              </div>
             ))}
           </div>
         )}
