@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { StatusBadge } from './StatusBadge';
+import { VoteResults } from './VoteResults';
 
 interface Proposal {
   id: string;
@@ -31,25 +32,12 @@ export function ProposalCard({ proposal }: ProposalCardProps) {
         </div>
       </div>
 
-      <div className="flex items-center gap-6 text-sm text-gray-600 mt-4">
-        <div>
-          <span className="font-medium text-green-600">For:</span>{' '}
-          {(Number(proposal.forVotes) / 1e18).toLocaleString(undefined, {
-            maximumFractionDigits: 0,
-          })}
-        </div>
-        <div>
-          <span className="font-medium text-red-600">Against:</span>{' '}
-          {(Number(proposal.againstVotes) / 1e18).toLocaleString(undefined, {
-            maximumFractionDigits: 0,
-          })}
-        </div>
-        <div>
-          <span className="font-medium text-gray-600">Abstain:</span>{' '}
-          {(Number(proposal.abstainVotes) / 1e18).toLocaleString(undefined, {
-            maximumFractionDigits: 0,
-          })}
-        </div>
+      <div className="mt-4">
+        <VoteResults
+          forVotes={proposal.forVotes}
+          againstVotes={proposal.againstVotes}
+          abstainVotes={proposal.abstainVotes}
+        />
       </div>
 
       <div className="text-xs text-gray-500 mt-2">

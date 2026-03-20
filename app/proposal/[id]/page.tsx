@@ -4,6 +4,7 @@ import { use } from 'react';
 import Link from 'next/link';
 import { useProposal } from '@/lib/hooks/useProposal';
 import { ProposalHeader } from '@/components/ProposalHeader';
+import { VoteResults } from '@/components/VoteResults';
 
 interface ProposalDetailPageProps {
   params: Promise<{ id: string }>;
@@ -48,6 +49,14 @@ export default function ProposalDetailPage({ params }: ProposalDetailPageProps) 
             status={proposal.status}
             proposerAddress={proposal.proposerAccountId}
           />
+          
+          <div className="mt-6">
+            <VoteResults
+              forVotes={proposal.forVotes}
+              againstVotes={proposal.againstVotes}
+              abstainVotes={proposal.abstainVotes}
+            />
+          </div>
         </div>
       </div>
     </div>
