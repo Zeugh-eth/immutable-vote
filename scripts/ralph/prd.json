@@ -1,174 +1,173 @@
 {
   "project": "ImmutableVote-ENS",
   "branchName": "ralph/ipfs-static-export",
-  "description": "Single-DAO static IPFS governance dashboard for ENS DAO, powered by Gateful REST API",
+  "description": "Minimal IPFS governance interface for ENS DAO — proposals, voting, wallet connect",
   "userStories": [
     {
       "id": "US-001",
-      "title": "Strip to single-DAO static shell",
-      "description": "As a developer, I need the project restructured as a single-DAO (ENS) static site with no server dependencies.",
+      "title": "Project scaffold — static Next.js shell",
+      "description": "As a developer, I need a clean static Next.js project with only governance routing.",
       "acceptanceCriteria": [
-        "Remove [daoId] dynamic routing — all pages are flat (/, /token-distribution, /governance, etc.)",
-        "Remove home page DAO selector / panel — root / goes directly to ENS overview",
-        "next.config.mjs has output: 'export' set",
-        "All next/image replaced with <img> or unoptimized: true",
+        "Strip dashboard to governance-only: / (proposals list) and /proposal/[id] (detail)",
+        "Remove all non-governance features: token-distribution, attack-profitability, risk-analysis, resilience-stages, holders-and-delegates, feed, dao-overview, alerts, donation, faq, glossary, terms, cookie, panel, contact, donate, aave",
+        "next.config.mjs has output: 'export' and images: { unoptimized: true }",
         "All API routes removed (app/api/ deleted)",
-        "Server-side redirects removed from next.config.mjs",
-        "serverExternalPackages removed from next config",
-        "resend package removed from dependencies",
-        "ENS DAO config hardcoded as the single data source",
-        "next build produces out/ directory successfully",
+        "Server-side redirects, serverExternalPackages, resend removed",
+        "Keep: shared/components/ (design system), shared/providers/, shared/dao-config/ens.ts, shared/utils/, shared/types/, shared/services/wallet/, abis/ens-governor.json",
+        "next build produces out/ with index.html",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 1,
       "passes": false,
-      "notes": "This is the big restructure. Current routing is app/[daoId]/(main)/... and app/[daoId]/(secondary)/... — flatten to app/(main)/... with ENS hardcoded. Remove app/page.tsx home panel, app/aave/, app/alerts/, app/contact/, app/donate/. Keep shared/ and features/ intact for now."
+      "notes": "Aggressive strip. Remove entire features/ except features/governance/. Remove app/[daoId]/ routing — flatten to app/page.tsx (list) and app/proposal/[id]/page.tsx (detail). Remove widgets/ sidebar, panel, header components that reference removed features. Keep shared/components/design-system/ as the UI library."
     },
     {
       "id": "US-002",
-      "title": "Implement Gateful REST data layer for ENS",
-      "description": "As a developer, I need typed data fetching hooks that pull ENS data from the Gateful REST API.",
+      "title": "Gateful REST client for proposals and votes",
+      "description": "As a developer, I need typed data fetching for ENS proposals and votes from Gateful REST API.",
       "acceptanceCriteria": [
-        "Create shared/data/gateful-client.ts with typed fetch functions for all ENS endpoints",
-        "Endpoints: /ens/proposals, /ens/token, /ens/treasury/liquid, /ens/treasury/dao-token, /ens/treasury/total, /ens/feed/events, /ens/accounts/{addr}/delegations, /ens/accounts/{addr}/delegators, /ens/token/historical-data, and all /ens/*/compare endpoints",
-        "All response types defined in shared/data/types.ts matching actual Gateful API shapes",
-        "Create React hooks (useProposals, useToken, useTreasury, useFeedEvents, useDelegations, etc.) using TanStack Query",
-        "Remove Apollo Client, @anticapture/graphql-client dependency, and all graphql imports",
-        "NEXT_PUBLIC_BASE_URL env var configures API base URL (default: https://gateful.up.railway.app)",
+        "Create shared/data/gateful.ts with typed fetch client",
+        "fetchProposals(params?) → GET /ens/proposals with pagination, status filter, ordering",
+        "fetchProposal(id) → GET /ens/proposals/{id} returns full proposal",
+        "fetchProposalVotes(id, params?) → GET /ens/proposals/{id}/votes with pagination",
+        "Types in shared/data/types.ts matching Gateful response shapes",
+        "React hooks: useProposals(), useProposal(id), useProposalVotes(id) using TanStack Query",
+        "Remove Apollo Client, @apollo/client, graphql, @anticapture/graphql-client from deps",
+        "NEXT_PUBLIC_API_URL env var (default: https://gateful.up.railway.app)",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 2,
       "passes": false,
-      "notes": "Gateful REST API at https://gateful.up.railway.app with CORS enabled. TanStack Query is already in package.json. Apollo Client, @apollo/client, graphql, and @anticapture/graphql-client should all be removed. Types should be derived from actual API response samples."
+      "notes": "Gateful REST API with CORS enabled. Proposal response has: id, title, description, status, forVotes, againstVotes, abstainVotes, quorum, proposerAccountId, startTimestamp, endTimestamp, calldatas, targets, values, txHash. Votes response has: voterAddress, support (0=against, 1=for, 2=abstain), votingPower, reason, timestamp. Both paginated with items[] and totalCount."
     },
     {
       "id": "US-003",
-      "title": "Wire features to new data hooks",
-      "description": "As a developer, I need all feature components to use the new Gateful REST hooks instead of Apollo/GraphQL.",
+      "title": "Proposals list page",
+      "description": "As a user, I want to see all ENS governance proposals with status and vote counts.",
       "acceptanceCriteria": [
-        "features/dao-overview uses useToken and useTreasury hooks",
-        "features/token-distribution uses token supply and compare hooks",
-        "features/attack-profitability uses treasury and token price hooks",
-        "features/governance uses useProposals and proposal detail hooks",
-        "features/holders-and-delegates uses delegation and delegator hooks",
-        "features/feed uses useFeedEvents hook",
-        "features/risk-analysis renders from DAO config (static, no API)",
-        "features/resilience-stages renders from DAO config (static)",
-        "No Apollo imports remain in the codebase",
-        "All features render with live data from Gateful",
+        "/ renders list of ENS proposals from Gateful",
+        "Each shows: title, status badge, for/against/abstain counts, proposer, timestamps",
+        "Active proposals visually distinguished",
+        "Click navigates to /proposal/[id]",
+        "Loading skeleton while fetching",
+        "Error state if API unreachable",
+        "Pagination or infinite scroll",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 3,
       "passes": false,
-      "notes": "This is the largest story — touching every feature. Work through features one at a time. risk-analysis and resilience-stages use static config from shared/dao-config/ens.ts so they don't need API changes. The governance feature has both list and detail views. Holders/delegates has drawers with sub-queries."
+      "notes": "Reuse existing ProposalItem component from features/governance/components/ where possible. Status values from Gateful: ACTIVE, EXECUTED, PENDING_EXECUTION, DEFEATED, CANCELLED, QUEUED."
     },
     {
       "id": "US-004",
-      "title": "Fix asset paths and fonts for IPFS",
-      "description": "As a user on eth.limo, I need all assets to load correctly from IPFS.",
+      "title": "Proposal detail page",
+      "description": "As a user, I want to read a full proposal and see vote breakdown.",
       "acceptanceCriteria": [
-        "All static assets use relative paths",
-        "Google Fonts replaced with self-hosted Inter in public/fonts/",
-        "No hardcoded localhost or domain-specific asset URLs",
-        "next.config.mjs configured for IPFS-compatible paths",
-        "Built out/ serves correctly via npx serve out",
+        "/proposal/[id] renders full proposal via client-side fetch",
+        "Shows: title, status, description (markdown rendered), proposer, timestamps, quorum",
+        "Vote progress bar: for vs against vs abstain with percentages",
+        "Quorum indicator showing current total vs required quorum",
+        "Votes list with: voter address, direction, voting power, reason, timestamp",
+        "Votes list paginated or infinite scroll",
+        "Calldata section: targets, values, calldatas (collapsible)",
+        "Loading and error states",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 4,
       "passes": false,
-      "notes": "IPFS gateways serve at varying path depths. Relative paths are safest. next/font may not work with static export — test first, replace with manual font-face if needed."
+      "notes": "markdown-to-jsx is already a dependency. Reuse existing proposal-overview components. Votes endpoint: GET /ens/proposals/{id}/votes. proposalId in the URL is the full numeric string ID."
     },
     {
       "id": "US-005",
-      "title": "Remove unused features and cleanup",
-      "description": "As a developer, I need to remove dead code, unused features, and multi-DAO artifacts.",
+      "title": "Wallet connection and voting power",
+      "description": "As a user, I need to connect my wallet to see my voting power.",
       "acceptanceCriteria": [
-        "app/alerts/, app/contact/, app/donate/, app/aave/ removed",
-        "features/alerts/ and features/donation/ removed",
-        "features/cookie/ removed if not needed",
-        "features/panel/ removed (no multi-DAO panel)",
-        "PostHog and Umami removed or behind env var",
-        "No dead imports or unused components",
+        "RainbowKit connect button in header",
+        "wagmi configured for Ethereum mainnet with Alchemy provider",
+        "Connected wallet shows address and ENS name if available",
+        "Voting power read on-chain via getVotes(address) on ENS Governor (0x323a76393544d5ecca80cd6ef2a560c6a395b7e3)",
+        "Disconnect clears state",
+        "NEXT_PUBLIC_WALLET_CONNECT_PROJECT_ID and NEXT_PUBLIC_ALCHEMY_KEY env vars",
+        "Works in static build",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 5,
       "passes": false,
-      "notes": "PostHog is in shared/services/posthog/, Umami in shared/services/umami/. Either remove entirely or wrap in NEXT_PUBLIC_ENABLE_ANALYTICS check."
+      "notes": "ENS Governor ABI already in abis/ens-governor.json. Use wagmi useReadContract for getVotes. Existing wallet config in shared/services/wallet/wallet.ts can be simplified to mainnet-only."
     },
     {
       "id": "US-006",
-      "title": "Static page generation and routing",
-      "description": "As a user, I need clean URLs for each section that work on IPFS.",
+      "title": "Vote on proposals",
+      "description": "As a token holder, I want to cast my vote on active ENS proposals.",
       "acceptanceCriteria": [
-        "Root / renders ENS overview",
-        "/token-distribution renders token page",
-        "/attack-profitability renders attack page",
-        "/holders-and-delegates renders holders page",
-        "/resilience-stages renders resilience page",
-        "/risk-analysis renders risk page",
-        "/governance renders proposals list",
-        "/governance/proposal/[proposalId] uses client-side routing for dynamic IDs",
-        "All pages pre-rendered as static HTML in out/",
-        "404 page works",
+        "Vote buttons (For / Against / Abstain) on active proposal detail when wallet connected",
+        "Optional reason text field",
+        "Calls castVote or castVoteWithReason on ENS Governor via wallet",
+        "Transaction simulation before send — error if no voting power or already voted",
+        "Loading state during tx + success/error toast",
+        "After vote, refetch votes to show updated counts",
+        "If already voted, show user's vote and disable buttons",
+        "Show 'Connect wallet to vote' when not connected",
+        "Hide vote buttons for non-active proposals",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 6,
       "passes": false,
-      "notes": "Proposal detail is the only truly dynamic route. Use a catch-all [[...slug]] or generateStaticParams with a placeholder and client-side fetch. All other pages are known at build time."
+      "notes": "Existing voteOnProposal.ts uses viem writeContract directly — reuse with minor cleanup. Has-voted check: query Gateful votes for connected address OR use governor hasVoted(proposalId, address) on-chain. Governor address hardcoded: 0x323a76393544d5ecca80cd6ef2a560c6a395b7e3."
     },
     {
       "id": "US-007",
-      "title": "IPFS deployment script",
-      "description": "As a developer, I need one command to build and deploy to IPFS.",
+      "title": "IPFS build and deployment",
+      "description": "As a developer, I need the build to work on IPFS with a deploy script.",
       "acceptanceCriteria": [
-        "scripts/deploy-ipfs.sh builds and pins out/ to IPFS",
-        "Uses ipfs add -r --cid-version=1",
-        "Prints CID and preview URL",
-        ".env.example lists all build-time env vars",
-        "README documents deployment flow",
+        "All assets use relative paths",
+        "Google Fonts replaced with self-hosted Inter in public/fonts/",
+        "Proposal detail uses client-side catch-all route for dynamic IDs",
+        "scripts/deploy-ipfs.sh builds and pins out/ with CIDv1",
+        ".env.example lists all env vars",
+        "out/ serves correctly via npx serve out",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 7,
       "passes": false,
-      "notes": "CIDv1 base32 needed for ENS content hash. Script should also support Pinata as alternative."
+      "notes": "CIDv1 base32 for ENS content hash. Test with npx serve out -s (single-page mode) to verify routing."
     },
     {
       "id": "US-008",
-      "title": "Smoke test and build verification",
-      "description": "As a developer, I need automated verification that the static build works.",
+      "title": "Smoke tests",
+      "description": "As a developer, I need automated build verification.",
       "acceptanceCriteria": [
-        "Test script builds the project with next build",
-        "Verifies out/ contains: index.html, token-distribution/index.html, governance/index.html, _next/static/",
-        "Serves out/ locally and checks key pages return 200",
-        "Verifies no broken asset references in HTML",
+        "Build produces out/ with index.html",
+        "Serve and verify / returns 200",
+        "Verify _next/static/ assets exist",
         "Runnable via npm run test:smoke",
         "Typecheck passes",
         "Tests pass"
       ],
       "priority": 8,
       "passes": false,
-      "notes": "Should verify at least: /, /token-distribution, /governance, /risk-analysis, /attack-profitability"
+      "notes": ""
     },
     {
       "id": "US-009",
       "title": "README",
-      "description": "As a developer, I need docs for the Immutable Vote ENS build.",
+      "description": "As a developer, I need minimal docs.",
       "acceptanceCriteria": [
-        "README explains: what this is, how to dev locally, how to build, how to deploy to IPFS",
-        "Lists all env vars with descriptions",
-        "Explains how to create another DAO site from this template",
+        "What this is, how to run, how to build, how to deploy",
+        "Env vars documented",
+        "How to fork for another DAO",
         "Typecheck passes"
       ],
       "priority": 9,
       "passes": false,
-      "notes": "Final story. Keep it concise."
+      "notes": ""
     }
   ]
 }
