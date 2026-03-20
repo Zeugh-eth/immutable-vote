@@ -71,3 +71,38 @@ Started: 2026-03-20 22:43 UTC
 - 779e430: test: US-002 - add tests for proposal detail page
 - a91253c: feat: US-002 - proposal detail basic shell
 
+
+
+---
+
+## [2026-03-20 23:02 UTC] US-003 - Vote Counts & Progress Bars - ✅ COMPLETE
+
+**TDD Cycle Completed:**
+- RED: Created 12 failing tests for VoteResults component
+- GREEN: Implemented minimal component with formatted counts and progress bars
+- REFACTOR: Extracted formatVoteCount and calculatePercentages to lib/utils.ts
+
+**Changes:**
+- Created components/VoteResults.tsx with vote display and progress bars
+- Created components/VoteResults.test.tsx with comprehensive test coverage
+- Added formatVoteCount() to lib/utils.ts (compact number formatting)
+- Added calculatePercentages() to lib/utils.ts (percentage calculations)
+- Integrated VoteResults into ProposalCard (replaced old vote display)
+- Integrated VoteResults into ProposalDetail page
+- Progress bars use flexbox, stack horizontally to 100% width
+- High contrast colors: bg-green-600, bg-red-600, bg-gray-500
+- Accessible: aria-labels on progress bars
+
+**All Acceptance Criteria Met:**
+✅ For/Against/Abstain counts formatted (488K, 1M using Intl.NumberFormat)
+✅ Vote percentages calculated and displayed
+✅ Visual progress bars (🟩 green=for, 🟥 red=against, ⬜ gray=abstain)
+✅ Bars stack horizontally to 100% width
+✅ High contrast colors (text-white on colored backgrounds)
+✅ Tests pass (12/12)
+✅ Typecheck passes (source code)
+
+**Commits:**
+- 12a89c3: test: US-003 - add tests for vote results display
+- b451e7d: feat: US-003 - vote counts and progress bars
+- babed17: feat: integrate VoteResults into ProposalCard and ProposalDetail
