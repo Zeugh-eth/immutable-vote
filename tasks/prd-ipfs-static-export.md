@@ -1,189 +1,187 @@
-# PRD: Immutable Vote — IPFS-Native Static Governance Dashboard
+# PRD: Immutable Vote — ENS DAO Static Governance Dashboard
 
 ## Introduction
 
-Convert the Anticapture governance dashboard from a server-dependent Next.js app into a fully static, IPFS-hostable frontend that works seamlessly through `.eth.limo`. The goal is a minimal viable governance dashboard that loads from IPFS with zero server infrastructure requirements, while retaining the core data visualization and analysis features that make Anticapture useful.
+Build a standalone, IPFS-hostable governance dashboard for **ENS DAO** — a single-DAO site with no server dependencies. The app loads from IPFS via `.eth.limo`, fetches live data from the Gateful REST API, and renders everything client-side.
 
-The app will be served at `immutablevote.eth.limo` (or similar ENS name) and must work identically whether accessed through eth.limo, a local IPFS gateway, or any pinning service.
+This is an isolated per-DAO build. No DAO selector, no home page, no panel. Just direct access to ENS governance data. Once proven with ENS, the same pattern can be replicated for other DAOs (UNI, COMP, etc.) as separate deployments.
 
 ## Goals
 
-- Produce a fully static build (`next export` / `output: 'export'`) that can be pinned to IPFS
-- Zero server dependencies at runtime — all data fetching happens client-side
-- Preserve core governance analysis features: risk analysis, token distribution, attack profitability, proposals, holders/delegates
-- Abstract data fetching behind a provider interface so the GraphQL backend can be swapped for direct subgraph/RPC queries later
-- Pre-render all known DAO pages at build time for clean URLs
-- Work through eth.limo gateway without broken routes or assets
-- Maintain wallet connection (RainbowKit) for future interactive features
+- Produce a fully static build (`output: 'export'`) deployable to IPFS
+- Zero server dependencies — all data fetched client-side from Gateful REST API
+- Single-DAO scope: ENS only (hardcoded, no dynamic DAO routing)
+- Preserve core features: risk analysis, token distribution, attack profitability, proposals, holders/delegates, activity feed, treasury
+- Replace Apollo/GraphQL with TanStack Query + typed fetch against Gateful REST API
 - Full TDD — every story has tests before implementation
+- Lightweight enough to load fast through eth.limo gateway
 
 ## User Stories
 
-### US-001: Configure Next.js for Static Export
-**Description:** As a developer, I need the project to produce a static HTML/JS/CSS build that can be deployed to IPFS.
+### US-001: Strip to single-DAO static shell
+**Description:** As a developer, I need the project restructured as a single-DAO (ENS) static site with no server dependencies.
 
 **Acceptance Criteria:**
+- [ ] Remove `[daoId]` dynamic routing — all pages are flat (`/`, `/token-distribution`, `/governance`, etc.)
+- [ ] Remove home page DAO selector / panel — root `/` goes directly to ENS overview
 - [ ] `next.config.mjs` has `output: 'export'` set
-- [ ] All `next/image` usages replaced with standard `<img>` tags or `next/image` with `unoptimized: true`
-- [ ] All API routes removed (`app/api/` directory deleted or emptied)
-- [ ] Server-side redirects converted to client-side redirects or removed
-- [ ] `next build` produces a static `out/` directory with all pages
-- [ ] No `getServerSideProps` or server-only imports remain
+- [ ] All `next/image` replaced with `<img>` or `unoptimized: true`
+- [ ] All API routes removed (`app/api/` deleted)
+- [ ] Server-side redirects removed
+- [ ] `serverExternalPackages` removed from next config
+- [ ] `resend` package removed from dependencies
+- [ ] ENS DAO config hardcoded as the single data source
+- [ ] `next build` produces `out/` directory successfully
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-002: Implement Data Fetching Abstraction Layer
-**Description:** As a developer, I need a clean abstraction over data sources so we can swap between the GraphQL API gateway and direct RPC/subgraph queries without changing feature code.
+### US-002: Implement Gateful REST data layer for ENS
+**Description:** As a developer, I need typed data fetching hooks that pull ENS data from the Gateful REST API.
 
 **Acceptance Criteria:**
-- [ ] Create `shared/data/` directory with provider interface types
-- [ ] Define `DataProvider` interface covering: proposals, token metrics, delegates, treasury, feed events, risk analysis
-- [ ] Implement `GraphQLDataProvider` that wraps existing Apollo Client queries
-- [ ] Export a React context (`DataProviderContext`) that features consume instead of calling Apollo directly
-- [ ] Existing Apollo hooks still work through the abstraction
-- [ ] Config allows setting the GraphQL endpoint URL at build time via env var
+- [ ] Create `shared/data/gateful-client.ts` with typed fetch functions for all ENS endpoints
+- [ ] Endpoints covered: `/ens/proposals`, `/ens/token`, `/ens/treasury/liquid`, `/ens/treasury/dao-token`, `/ens/treasury/total`, `/ens/feed/events`, `/ens/accounts/{addr}/delegations`, `/ens/accounts/{addr}/delegators`, `/ens/token/historical-data`, `/ens/delegated-supply/compare`, `/ens/circulating-supply/compare`, `/ens/proposals/compare`, `/ens/votes/compare`
+- [ ] All response types defined in `shared/data/types.ts` matching actual Gateful API shapes
+- [ ] Create React hooks (`useProposals`, `useToken`, `useTreasury`, `useFeedEvents`, `useDelegations`, etc.) using TanStack Query
+- [ ] Remove Apollo Client, `@anticapture/graphql-client` workspace dependency, and all `graphql` imports
+- [ ] `NEXT_PUBLIC_BASE_URL` env var configures Gateful API base URL (default: `https://gateful.up.railway.app`)
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-003: Remove Server-Side Dependencies
-**Description:** As a developer, I need to strip all server-only code paths so the build succeeds as a static export.
+### US-003: Wire features to new data hooks
+**Description:** As a developer, I need all existing feature components to use the new Gateful REST hooks instead of Apollo/GraphQL.
 
 **Acceptance Criteria:**
-- [ ] `app/api/contact/` route removed (contact form either removed or converted to `mailto:` link)
-- [ ] `app/api/figma/` route removed
-- [ ] `resend` package usage removed from production code
-- [ ] Server-only env vars (`RESEND_API_KEY`, `FIGMA_TOKEN`, `CONTACT_EMAIL`, `ALLOWED_ORIGINS`) no longer referenced at runtime
-- [ ] `next.config.mjs` redirects replaced with a client-side redirect component or removed
-- [ ] `serverExternalPackages` config removed
-- [ ] Build completes with `output: 'export'` without errors
+- [ ] `features/dao-overview` uses `useToken`, `useTreasury` hooks
+- [ ] `features/token-distribution` uses token supply and compare hooks
+- [ ] `features/attack-profitability` uses treasury and token price hooks
+- [ ] `features/governance` uses `useProposals` and proposal detail hooks
+- [ ] `features/holders-and-delegates` uses delegation and delegator hooks
+- [ ] `features/feed` uses `useFeedEvents` hook
+- [ ] `features/risk-analysis` renders from DAO config (static data, no API needed)
+- [ ] `features/resilience-stages` renders from DAO config (static data)
+- [ ] No Apollo imports remain anywhere in the codebase
+- [ ] All features render with data when pointed at live Gateful endpoint
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-004: Static Path Generation for DAO Pages
-**Description:** As a user, I want to access each DAO's dashboard via a clean URL like `/ens` or `/uni` that works on IPFS.
+### US-004: Fix asset paths and fonts for IPFS
+**Description:** As a user on eth.limo, I need all assets to load correctly.
 
 **Acceptance Criteria:**
-- [ ] `generateStaticParams` implemented for `[daoId]` routes, returning all DAOs from `shared/dao-config/index.ts` (UNI, ENS, OP, GTC, SCR, NOUNS, COMP, OBOL)
-- [ ] Each DAO's main page and all sub-pages (attack-profitability, holders-and-delegates, resilience-stages, risk-analysis, token-distribution, governance) are pre-rendered
-- [ ] `out/` directory contains HTML files for every DAO route (e.g., `out/ens/index.html`, `out/ens/token-distribution/index.html`)
-- [ ] 404 page renders correctly for unknown DAOs
+- [ ] All static assets use relative paths (no absolute URLs)
+- [ ] Google Fonts replaced with self-hosted Inter in `public/fonts/`
+- [ ] No hardcoded `localhost` or domain-specific URLs for assets
+- [ ] `next.config.mjs` configured for IPFS-compatible paths
+- [ ] Built `out/` serves correctly via `npx serve out`
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-005: Fix Asset Paths for IPFS Compatibility
-**Description:** As a user accessing the site via IPFS gateway, I need all assets (JS, CSS, images, fonts) to load correctly regardless of the gateway URL structure.
+### US-005: Remove unused features and pages
+**Description:** As a developer, I need to remove features that don't apply to a single-DAO isolated site.
 
 **Acceptance Criteria:**
-- [ ] `next.config.mjs` sets `basePath` or `assetPrefix` to work with IPFS relative paths
-- [ ] All static assets in `public/` are referenced with relative paths
-- [ ] No hardcoded absolute URLs to `localhost` or specific domains for assets
-- [ ] Google Fonts replaced with self-hosted fonts in `public/fonts/` (Inter)
-- [ ] Built `out/` directory serves correctly when tested with a local HTTP server (`npx serve out`)
+- [ ] Remove `app/alerts/` (multi-DAO feature)
+- [ ] Remove `app/contact/` and `app/donate/` (server-dependent or out of scope)
+- [ ] Remove `app/aave/` (different DAO)
+- [ ] Remove `features/alerts/` and `features/donation/`
+- [ ] Remove `features/cookie/` if not needed
+- [ ] Remove or simplify `features/panel/` (no multi-DAO panel)
+- [ ] PostHog and Umami either removed or made optional via env var
+- [ ] FAQ, glossary, terms-of-service kept as static pages if useful, removed if not
+- [ ] No dead imports or unused components remain
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-006: Client-Side Analytics Replacement
-**Description:** As a developer, I need analytics to work without server-side code, or be gracefully disabled.
+### US-006: Static page generation and routing
+**Description:** As a user, I need clean URLs for each section that work on IPFS.
 
 **Acceptance Criteria:**
-- [ ] PostHog integration uses client-side-only SDK or is removed
-- [ ] Umami integration uses client-side script tag or is removed
-- [ ] No analytics code causes build failures or runtime errors
-- [ ] Analytics can be enabled/disabled via build-time env var
+- [ ] Root `/` renders ENS overview (what was `/ens`)
+- [ ] `/token-distribution` renders token distribution page
+- [ ] `/attack-profitability` renders attack profitability page
+- [ ] `/holders-and-delegates` renders holders page
+- [ ] `/resilience-stages` renders resilience page
+- [ ] `/risk-analysis` renders risk analysis page
+- [ ] `/governance` renders governance/proposals list
+- [ ] `/governance/proposal/[proposalId]` uses client-side catch-all for dynamic proposal IDs
+- [ ] All pages pre-rendered as static HTML in `out/`
+- [ ] 404 page works
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-007: Contact & Donation Pages — Static Conversion
-**Description:** As a user, I want the contact and donation pages to work without server-side APIs.
+### US-007: IPFS deployment script
+**Description:** As a developer, I need one command to build and pin to IPFS.
 
 **Acceptance Criteria:**
-- [ ] Contact page uses `mailto:` link or external form service instead of API route
-- [ ] Donation page works fully client-side (wallet interaction is already client-side)
-- [ ] FAQ, glossary, and terms-of-service pages render as static pages
-- [ ] All informational pages accessible and correct in static build
+- [ ] `scripts/deploy-ipfs.sh` builds with `next build` and pins `out/` to IPFS
+- [ ] Supports local `ipfs` CLI with `--cid-version=1`
+- [ ] Prints CID and preview URL
+- [ ] `.env.example` lists all required build-time env vars
+- [ ] README documents the deployment flow
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-008: IPFS Deployment Script & ENS Content Hash Update
-**Description:** As a developer, I need a one-command script to build, pin to IPFS, and optionally update the ENS content hash.
+### US-008: Smoke test and build verification
+**Description:** As a developer, I need automated verification that the static build works.
 
 **Acceptance Criteria:**
-- [ ] `scripts/deploy-ipfs.sh` script that: builds the project, pins `out/` to IPFS (via `ipfs add -r` or Pinata/web3.storage API), outputs the CID
-- [ ] Script prints the eth.limo URL for verification
-- [ ] README documents the full deployment flow including ENS content hash update
-- [ ] `.env.example` updated with all required build-time env vars
+- [ ] Test script builds the project
+- [ ] Verifies `out/` contains: `index.html`, `token-distribution/index.html`, `governance/index.html`, `_next/static/`
+- [ ] Serves `out/` locally and checks key pages return 200
+- [ ] Verifies no broken asset references in HTML
+- [ ] Runnable via `npm run test:smoke`
 - [ ] Typecheck passes
 - [ ] Tests pass
 
-### US-009: Smoke Test — Full Static Build Verification
-**Description:** As a developer, I need an automated smoke test that verifies the static build works end-to-end.
+### US-009: README
+**Description:** As a developer, I need docs for Immutable Vote ENS.
 
 **Acceptance Criteria:**
-- [ ] Test script builds the project with `next build`
-- [ ] Verifies `out/` directory exists with expected structure (home page, all DAO pages, assets)
-- [ ] Serves `out/` with a local HTTP server and checks that key pages return 200
-- [ ] Verifies no broken asset references (JS/CSS files referenced in HTML exist in `out/`)
-- [ ] Can be run in CI (`npm run test:smoke`)
-- [ ] Typecheck passes
-- [ ] Tests pass
-
-### US-010: README & Documentation
-**Description:** As a developer or contributor, I need clear docs on how to build, deploy, and develop Immutable Vote.
-
-**Acceptance Criteria:**
-- [ ] `README.md` rewritten for Immutable Vote (not Anticapture monorepo)
-- [ ] Documents: prerequisites, local dev, static build, IPFS deployment, ENS setup
-- [ ] Explains the data provider abstraction and how to swap backends
-- [ ] Lists all build-time environment variables with descriptions
-- [ ] Includes architecture diagram (text-based) showing static build → IPFS → eth.limo flow
+- [ ] README explains: what this is, how to dev, how to build, how to deploy to IPFS
+- [ ] Lists all env vars
+- [ ] Explains how to create another DAO's site from this template
 - [ ] Typecheck passes
 
 ## Functional Requirements
 
-- FR-1: `next build` produces a complete static site in `out/` with no server runtime
-- FR-2: All pages render client-side with data fetched via TanStack Query + fetch from the Gateful REST API (`https://gateful.up.railway.app`)
-- FR-3: `NEXT_PUBLIC_BASE_URL` env var configures the Gateful REST API endpoint at build time
-- FR-4: All 7 supported DAO dashboards (UNI, ENS, GTC, SCR, NOUNS, COMP, OBOL) are pre-rendered as static HTML (OP excluded — not on Gateful)
-- FR-5: Wallet connection (RainbowKit + wagmi) works for read-only purposes
-- FR-6: All sub-pages per DAO (overview, attack-profitability, holders-and-delegates, resilience-stages, risk-analysis, token-distribution, governance) are statically generated
-- FR-7: No runtime dependency on any server — the app functions identically served from IPFS, S3, or `file://`
-- FR-8: Assets load correctly through IPFS gateways using relative paths
-- FR-9: Proposal detail pages (`/[daoId]/governance/proposal/[proposalId]`) use client-side routing (hash or catch-all) since proposal IDs are dynamic
+- FR-1: `next build` produces a complete static site in `out/` — no server runtime
+- FR-2: All data fetched client-side from Gateful REST API at `https://gateful.up.railway.app/ens/*`
+- FR-3: `NEXT_PUBLIC_BASE_URL` configures the API endpoint at build time
+- FR-4: Site is ENS-only — no DAO switching, no multi-DAO navigation
+- FR-5: All section pages pre-rendered as static HTML
+- FR-6: Proposal detail pages load dynamically (client-side routing for `/governance/proposal/[id]`)
+- FR-7: Wallet connection (RainbowKit) available for read-only features
+- FR-8: Assets load correctly through IPFS gateways via relative paths
 
 ## Non-Goals
 
-- No server-side rendering or incremental static regeneration
-- No rewriting data fetching to use direct subgraph queries (that's Phase 2 — the abstraction layer prepares for it)
-- No new features — this is a conversion, not a feature release
-- No mobile app or PWA features
-- No custom IPFS gateway — we use eth.limo and standard gateways
+- No multi-DAO support in this build (other DAOs = separate deployments)
+- No server-side rendering or ISR
 - No on-chain write transactions (voting, delegating) — read-only for MVP
-- No redesign — visual parity with current Anticapture dashboard
+- No redesign — visual parity with current ENS page on Anticapture
+- No new features beyond what exists
+- No alerts or notification system
 
 ## Technical Considerations
 
-- **Data source: Gateful REST API** at `https://gateful.up.railway.app` — NOT the GraphQL API Gateway. CORS is enabled (`access-control-allow-origin: *`). Endpoints are `/{daoId}/proposals`, `/{daoId}/token`, `/{daoId}/treasury/liquid`, `/{daoId}/feed/events`, `/{daoId}/accounts/{address}/delegations`, etc.
-- **Available DAOs on Gateful**: ens, uni, comp, nouns, gtc, obol, scr (NOT op — returns 404)
-- **Apollo Client should be replaced** with a simpler REST client (fetch + SWR/TanStack Query) since the backend is REST, not GraphQL
-- **Next.js static export** requires `output: 'export'` and has limitations: no middleware, no API routes, no `next/image` optimization, no ISR
-- **Dynamic routes** (`[proposalId]`) can't be pre-rendered without knowing all IDs at build time — use client-side catch-all route or hash routing for proposals
-- **NuqsAdapter** (URL search params) needs to use `nuqs/adapters/next/app` which should work with static export
-- **Wallet config** uses `publicClient` from viem for ENS resolution — this works client-side via Alchemy RPC
-- **Font loading**: `next/font` may not work with static export — use self-hosted font files instead
-- **eth.limo specifics**: serves content from IPFS via ENS content hash, supports `_redirects` file for SPA fallback (needs verification), respects standard HTTP caching headers from IPFS
+- **Gateful REST API**: `https://gateful.up.railway.app` with CORS enabled. All endpoints scoped to `/ens/*`.
+- **Replace Apollo + GraphQL entirely** with TanStack Query (already a dep) + native fetch
+- **Proposal detail pages** are the only dynamic route — use Next.js catch-all `[[...slug]]` or client-side navigation
+- **DAO config** (`shared/dao-config/ens.ts`) contains static risk/governance data — no API needed for those features
+- **next/font** may not work with static export — test and fall back to self-hosted
+- **Bundle size target**: under 5MB compressed for fast IPFS loading
 
 ## Success Metrics
 
-- `next build` completes with zero errors on `output: 'export'`
-- `out/` directory serves correctly via `npx serve out` with all pages and assets loading
-- Build size under 10MB (compressed) for reasonable IPFS pinning
-- All existing DAO pages render with data when pointed at a live GraphQL endpoint
-- Site loads in under 5 seconds through eth.limo gateway
+- `next build` with `output: 'export'` completes with zero errors
+- All 7 section pages render with live ENS data via Gateful
+- Build output under 5MB compressed
+- Site loads in under 5s through eth.limo
+- Zero runtime server dependencies
 
 ## Open Questions
 
-- Does eth.limo support a `_redirects` or `200.html` fallback for SPA routing? (If yes, proposal detail pages can use path routing instead of hash)
-- Should we strip features that are broken without the API (alerts, service-providers) or keep them with loading/error states?
-- What ENS name will be used? (`immutablevote.eth`? subdomain of `anticapture.eth`?)
-- Should the feed feature be included in MVP or deferred? (It's heavy on API calls)
-- Is the current Anticapture API Gateway publicly accessible with CORS, or do we need to deploy a public instance?
+- ENS name for deployment? (e.g., `ens.immutablevote.eth.limo` or similar)
+- Should the service-providers page be included? (depends on Gateful support)
+- Keep glossary/FAQ/terms or strip for minimal MVP?
