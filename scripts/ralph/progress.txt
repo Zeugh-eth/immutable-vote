@@ -38,3 +38,36 @@ Started: 2026-03-20 22:43 UTC
 - a3a7c35: test: US-001 - add tests for clickable proposals
 - a6637e4: feat: US-001 - make proposals clickable
 
+
+---
+
+## [2026-03-20 23:00 UTC] US-002 - Proposal Detail - Basic Shell - ✅ COMPLETE
+
+**TDD Cycle Completed:**
+- RED: Created 7 failing tests for proposal detail page
+- GREEN: Implemented minimal page with useProposal hook
+- REFACTOR: Extracted StatusBadge, ProposalHeader components and utility functions
+
+**Changes:**
+- Created app/proposal/[id]/page.tsx as client component using React.use()
+- Created lib/hooks/useProposal.ts using TanStack Query
+- Created components/StatusBadge.tsx (reusable across ProposalCard)
+- Created components/ProposalHeader.tsx (title + status + proposer)
+- Created lib/utils.ts with truncateAddress helper
+- Updated ProposalCard to use shared StatusBadge component
+- Proper loading and error states
+
+**All Acceptance Criteria Met:**
+✅ Route /proposal/[id] exists as client component
+✅ Fetches proposal from Gateful using useQuery
+✅ Shows title, proposer, status badge
+✅ Back button links to proposals list
+✅ Loading skeleton while fetching
+✅ Error state for 404/failed fetch
+✅ Tests pass (7/7)
+✅ Typecheck passes (source code)
+
+**Commits:**
+- 779e430: test: US-002 - add tests for proposal detail page
+- a91253c: feat: US-002 - proposal detail basic shell
+
