@@ -1,0 +1,499 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ENS Governance</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 0;
+            padding: 20px;
+            background: #f0f0f0;
+        }
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+            background: white;
+            padding: 20px;
+            border-radius: 5px;
+        }
+        h1 {
+            color: #5298FF;
+        }
+        .wallet-status {
+            margin-bottom: 20px;
+            font-size: 14px;
+            color: #666;
+        }
+        .connect-btn {
+            background: #5298FF;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        .connect-btn:hover {
+            background: #3d7dd8;
+        }
+        .proposal {
+            border: 1px solid #ddd;
+            padding: 15px;
+            margin: 10px 0;
+            cursor: pointer;
+            background: white;
+            transition: transform 0.2s, box-shadow 0.2s;
+        }
+        .proposal:hover {
+            background: #f9f9f9;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+        }
+        .proposal-title {
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+        .status {
+            display: inline-block;
+            padding: 3px 10px;
+            border-radius: 3px;
+            font-size: 12px;
+            margin-right: 10px;
+        }
+        .status-active { background: #28a745; color: white; }
+        .status-executed { background: #17a2b8; color: white; }
+        .status-defeated { background: #dc3545; color: white; }
+        .status-pending { background: #ffc107; color: #212529; }
+        .vote-bars {
+            display: flex;
+            height: 8px;
+            border-radius: 4px;
+            overflow: hidden;
+            margin-top: 8px;
+            background: #e9ecef;
+        }
+        .bar-for { background: #28a745; }
+        .bar-against { background: #dc3545; }
+        .bar-abstain { background: #6c757d; }
+        .votes-box {
+            border: 1px solid #ddd;
+            padding: 15px;
+            border-radius: 5px;
+            background: #f8f9fa;
+            margin-top: 20px;
+        }
+        .vote-item {
+            margin: 8px 0;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        .votes {
+            margin-top: 10px;
+            font-size: 14px;
+            color: #666;
+        }
+        .vote-for { color: #28a745; }
+        .vote-against { color: #dc3545; }
+        .back-link {
+            color: #5298FF;
+            cursor: pointer;
+            margin-bottom: 20px;
+            display: inline-block;
+        }
+        .detail {
+            display: none;
+        }
+        .error {
+            background: #f8d7da;
+            color: #721c24;
+            padding: 15px;
+            border-radius: 5px;
+        }
+        .vote-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .vote-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+            color: white;
+        }
+        .vote-btn:hover {
+            opacity: 0.8;
+        }
+        .vote-btn-for {
+            background: #28a745;
+        }
+        .vote-btn-against {
+            background: #dc3545;
+        }
+        .vote-btn-abstain {
+            background: #6c757d;
+        }
+        .proposal-time {
+            font-size: 13px;
+            color: #666;
+            margin-top: 5px;
+        }
+        .description h3 {
+            margin-top: 20px;
+            margin-bottom: 10px;
+            font-size: 18px;
+        }
+        .description h4 {
+            margin-top: 15px;
+            margin-bottom: 8px;
+            font-size: 16px;
+        }
+        .description p {
+            margin-bottom: 12px;
+            line-height: 1.6;
+        }
+        .description ul {
+            margin-left: 20px;
+            margin-bottom: 12px;
+        }
+        .description a {
+            color: #5298FF;
+            text-decoration: underline;
+        }
+        .description a:hover {
+            color: #4080dd;
+        }
+        .spinner {
+            border: 3px solid #f3f3f3;
+            border-top: 3px solid #5298FF;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            animation: spin 1s linear infinite;
+            margin: 20px auto;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .loading {
+            text-align: center;
+            padding: 40px;
+        }
+        button:focus, .connect-btn:focus {
+            outline: 2px solid #5298FF;
+            outline-offset: 2px;
+        }
+        @media (max-width: 768px) {
+            body { padding: 10px; }
+            .container { padding: 15px; }
+            h1 { font-size: 24px; }
+            .vote-buttons { flex-direction: column; }
+            .vote-btn { width: 100%; }
+            .proposal { padding: 12px; }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div id="wallet-status" class="wallet-status"></div>
+        
+        <div id="list-view">
+            <h1>ENS Governance Proposals</h1>
+            <div id="proposals"></div>
+        </div>
+        
+        <div id="detail-view" class="detail">
+            <span class="back-link" onclick="showList()">← Back</span>
+            <div id="proposal-detail"></div>
+        </div>
+    </div>
+
+    <script>
+        const API = 'https://gateful.up.railway.app';
+        let currentAccount = null;
+        let provider = null;
+        
+        async function connectWallet() {
+            if (!window.ethereum) { alert('Please install MetaMask to use voting features'); return; }
+            try {
+                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
+                currentAccount = accounts[0];
+                provider = window.ethereum;
+                updateWalletUI();
+            } catch (err) {
+                console.error('Failed to connect wallet:', err);
+                alert('Wallet connection failed. Please try again.');
+            }
+        }
+        
+        function updateWalletUI() {
+            const statusEl = document.getElementById('wallet-status');
+            if (currentAccount) {
+                const truncated = currentAccount.slice(0, 6) + '...' + currentAccount.slice(-4);
+                statusEl.innerHTML = `Connected: <strong>${truncated}</strong>`;
+            } else {
+                statusEl.innerHTML = '<button class="connect-btn" onclick="connectWallet()">Connect Wallet</button>';
+            }
+        }
+        
+        if (window.ethereum) {
+            ethereum.request({ method: 'eth_accounts' })
+                .then(accounts => {
+                    if (accounts.length > 0) { currentAccount = accounts[0]; provider = window.ethereum; }
+                    updateWalletUI();
+                })
+                .catch(err => { console.error('Failed to check wallet:', err); updateWalletUI(); });
+            ethereum.on('accountsChanged', (accounts) => { currentAccount = accounts[0] || null; updateWalletUI(); });
+        } else { updateWalletUI(); }
+        
+        function fmt(num) {
+            const n = parseFloat(num || 0) / 1e18;
+            if (n >= 1e6) return (n / 1e6).toFixed(1) + 'M';
+            if (n >= 1e3) return (n / 1e3).toFixed(1) + 'K';
+            return n.toFixed(0);
+        }
+        
+        function calcPercentages(forVotes, againstVotes, abstainVotes) {
+            const f = parseFloat(forVotes || 0) / 1e18;
+            const a = parseFloat(againstVotes || 0) / 1e18;
+            const ab = parseFloat(abstainVotes || 0) / 1e18;
+            const total = f + a + ab;
+            if (total === 0) return { for: 0, against: 0, abstain: 0 };
+            return {
+                for: ((f / total) * 100).toFixed(1),
+                against: ((a / total) * 100).toFixed(1),
+                abstain: ((ab / total) * 100).toFixed(1)
+            };
+        }
+        
+        function timeUntil(timestamp) {
+            if (!timestamp) return '';
+            const now = Date.now();
+            const target = parseInt(timestamp) * 1000;
+            const diff = target - now;
+            if (diff < 0) {
+                const ago = Math.abs(diff);
+                const days = Math.floor(ago / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((ago % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                if (days > 0) return `Ended ${days}d ago`;
+                if (hours > 0) return `Ended ${hours}h ago`;
+                return 'Ended recently';
+            } else {
+                const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                if (days > 0) return hours > 0 ? `${days}d ${hours}h left` : `${days}d left`;
+                if (hours > 0) return `${hours}h left`;
+                return 'Ending soon';
+            }
+        }
+        
+        function renderDescription(text) {
+            if (!text) return '<p>No description available.</p>';
+            let html = text.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+            html = html.replace(/^## (.+)$/gm, '<h3>$1</h3>');
+            html = html.replace(/^### (.+)$/gm, '<h4>$1</h4>');
+            html = html.replace(/\[([^\]]+)\]\(([^)]+)\)/g, '<a href="$2" target="_blank">$1</a>');
+            html = html.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>');
+            html = html.replace(/^- (.+)$/gm, '<li>$1</li>');
+            html = html.replace(/(<li>.*<\/li>\n?)+/g, '<ul>$&</ul>');
+            html = html.split('\n\n').map(para => {
+                if (para.startsWith('<h') || para.startsWith('<ul') || para.startsWith('<ol')) return para;
+                return '<p>' + para.replace(/\n/g, '<br>') + '</p>';
+            }).join('');
+            return html;
+        }
+        
+        async function vote(proposalId, support) {
+            if (!currentAccount || !provider) { alert('Please connect your wallet first'); return; }
+            const buttons = document.querySelectorAll('.vote-btn');
+            buttons.forEach(btn => { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; });
+            const originalText = event.target.textContent;
+            event.target.textContent = 'Submitting vote...';
+            try {
+                const methodId = '0x56781388';
+                const encodedId = proposalId.slice(2).padStart(64, '0');
+                const encodedSupport = support.toString(16).padStart(64, '0');
+                const data = methodId + encodedId + encodedSupport;
+                const tx = await provider.request({
+                    method: 'eth_sendTransaction',
+                    params: [{ from: currentAccount, to: '0x323a76393544d5ecca80cd6ef2a560c6a395b7e3', data: data }]
+                });
+                alert('Vote submitted! TX: ' + tx);
+                setTimeout(() => showDetail(proposalId), 3000);
+            } catch (error) {
+                console.error('Vote error:', error);
+                let errorMsg = 'Vote failed. ';
+                if (error.code === 4001) errorMsg += 'Transaction was rejected.';
+                else if (error.message.includes('gas')) errorMsg += 'Insufficient gas or gas estimation failed.';
+                else if (error.message.includes('network')) errorMsg += 'Network error. Please check your connection.';
+                else errorMsg += error.message;
+                alert(errorMsg);
+                buttons.forEach(btn => { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; });
+                event.target.textContent = originalText;
+            }
+        }
+        
+        function renderVoteBars(forVotes, againstVotes, abstainVotes) {
+            const pct = calcPercentages(forVotes, againstVotes, abstainVotes);
+            const total = parseFloat(forVotes || 0) + parseFloat(againstVotes || 0) + parseFloat(abstainVotes || 0);
+            
+            if (total === 0) return '<div class="vote-bars"></div>';
+            
+            return `
+                <div class="vote-bars">
+                    ${pct.for > 0 ? `<div class="bar-for" style="width: ${pct.for}%"></div>` : ''}
+                    ${pct.against > 0 ? `<div class="bar-against" style="width: ${pct.against}%"></div>` : ''}
+                    ${pct.abstain > 0 ? `<div class="bar-abstain" style="width: ${pct.abstain}%"></div>` : ''}
+                </div>
+            `;
+        }
+        
+        async function loadProposals() {
+            const proposalsEl = document.getElementById('proposals');
+            proposalsEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading proposals...</p></div>';
+            
+            try {
+                const res = await fetch(`${API}/ens/proposals`);
+                
+                if (!res.ok) {
+                    throw new Error('Failed to load data. Please try again.');
+                }
+                
+                const data = await res.json();
+                const items = data.items || [];
+                
+                if (items.length === 0) {
+                    proposalsEl.innerHTML = '<div class="loading"><p>No proposals found.</p><p style="color: #666; font-size: 14px;">Check back later for new governance proposals.</p></div>';
+                    return;
+                }
+                
+                let html = '';
+                for (let p of items) {
+                    const statusClass = 'status-' + (p.status || 'pending').toLowerCase();
+                    const pct = calcPercentages(p.forVotes, p.againstVotes, p.abstainVotes);
+                    const timeInfo = timeUntil(p.endTimestamp);
+                    
+                    html += `
+                        <div class="proposal" onclick="showDetail('${p.id}')">
+                            <div class="proposal-title">${p.title || 'Untitled'}</div>
+                            <div>
+                                <span class="status ${statusClass}">${p.status || 'PENDING'}</span>
+                            </div>
+                            <div class="votes">
+                                <span class="vote-for">For: ${fmt(p.forVotes)} (${pct.for}%)</span> | 
+                                <span class="vote-against">Against: ${fmt(p.againstVotes)} (${pct.against}%)</span> | 
+                                <span>Abstain: ${fmt(p.abstainVotes)} (${pct.abstain}%)</span>
+                            </div>
+                            ${renderVoteBars(p.forVotes, p.againstVotes, p.abstainVotes)}
+                            ${timeInfo ? `<div class="proposal-time">${timeInfo}</div>` : ''}
+                        </div>
+                    `;
+                }
+                
+                proposalsEl.innerHTML = html;
+            } catch (err) {
+                console.error('Load error:', err);
+                
+                let errorMsg = 'Failed to load proposals. ';
+                if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                    errorMsg = 'Network error. Please check your connection.';
+                } else if (err.message) {
+                    errorMsg = err.message;
+                }
+                
+                proposalsEl.innerHTML = `<div class="error">${errorMsg}</div>`;
+            }
+        }
+        
+        async function showDetail(id) {
+            const detailEl = document.getElementById('proposal-detail');
+            detailEl.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading proposal...</p></div>';
+            
+            document.getElementById('list-view').style.display = 'none';
+            document.getElementById('detail-view').style.display = 'block';
+            
+            try {
+                const res = await fetch(`${API}/ens/proposals/${id}`);
+                
+                if (!res.ok) {
+                    throw new Error('Failed to load proposal. Please try again.');
+                }
+                
+                const p = await res.json();
+                
+                const statusClass = 'status-' + (p.status || 'pending').toLowerCase();
+                const pct = calcPercentages(p.forVotes, p.againstVotes, p.abstainVotes);
+                
+                let voteButtonsHtml = '';
+                if (currentAccount && p.status === 'ACTIVE') {
+                    voteButtonsHtml = `
+                        <div class="vote-buttons">
+                            <button class="vote-btn vote-btn-for" onclick="vote('${p.id}', 1)">Vote For</button>
+                            <button class="vote-btn vote-btn-against" onclick="vote('${p.id}', 0)">Vote Against</button>
+                            <button class="vote-btn vote-btn-abstain" onclick="vote('${p.id}', 2)">Abstain</button>
+                        </div>
+                    `;
+                }
+                
+                detailEl.innerHTML = `
+                    <h2>${p.title || 'Untitled'}</h2>
+                    <div>
+                        <span class="status ${statusClass}">${p.status || 'PENDING'}</span>
+                    </div>
+                    
+                    <div class="votes-box">
+                        <h3 style="margin-top: 0;">Votes</h3>
+                        ${renderVoteBars(p.forVotes, p.againstVotes, p.abstainVotes)}
+                        <div style="margin-top: 15px;">
+                            <div class="vote-item">
+                                <span class="vote-for">✓ For</span>
+                                <span><strong>${fmt(p.forVotes)}</strong> (${pct.for}%)</span>
+                            </div>
+                            <div class="vote-item">
+                                <span class="vote-against">✗ Against</span>
+                                <span><strong>${fmt(p.againstVotes)}</strong> (${pct.against}%)</span>
+                            </div>
+                            <div class="vote-item">
+                                <span>− Abstain</span>
+                                <span><strong>${fmt(p.abstainVotes)}</strong> (${pct.abstain}%)</span>
+                            </div>
+                        </div>
+                        ${voteButtonsHtml}
+                    </div>
+                    
+                    <div style="margin-top: 20px;">
+                        <h3>Description</h3>
+                        <div class="description">
+                            ${renderDescription(p.description)}
+                        </div>
+                    </div>
+                `;
+            } catch (err) {
+                console.error('Detail load error:', err);
+                
+                let errorMsg = 'Failed to load proposal. ';
+                if (err.message.includes('Failed to fetch') || err.message.includes('NetworkError')) {
+                    errorMsg = 'Network error. Please check your connection.';
+                } else if (err.message) {
+                    errorMsg = err.message;
+                }
+                
+                detailEl.innerHTML = `<div class="error">${errorMsg}</div>`;
+            }
+        }
+        
+        function showList() {
+            document.getElementById('detail-view').style.display = 'none';
+            document.getElementById('list-view').style.display = 'block';
+        }
+        
+        loadProposals();
+    </script>
+</body>
+</html>
