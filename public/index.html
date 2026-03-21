@@ -4,6 +4,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ENS Governance</title>
+    <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.8.0/dist/umd/index.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.12/dist/index.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -197,6 +200,49 @@
             .vote-btn { width: 100%; }
             .proposal { padding: 12px; }
         }
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0,0,0,0.5);
+            z-index: 1000;
+        }
+        .modal.show {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .modal-card {
+            background: white;
+            padding: 30px;
+            border-radius: 8px;
+            max-width: 500px;
+            margin: 20px;
+        }
+        .modal-buttons {
+            display: flex;
+            gap: 10px;
+            margin-top: 20px;
+        }
+        .modal-btn {
+            flex: 1;
+            padding: 12px;
+            border: none;
+            border-radius: 4px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        .modal-btn-primary {
+            background: #5298FF;
+            color: white;
+        }
+        .modal-btn-secondary {
+            background: #f0f0f0;
+            color: #333;
+        }
     </style>
 </head>
 <body>
@@ -214,21 +260,90 @@
         </div>
     </div>
 
+    <div id="context-modal" class="modal">
+        <div class="modal-card">
+            <h3>🗳️ Connect Your Wallet to Vote</h3>
+            <p>To participate in ENS governance, you need to:</p>
+            <ol>
+                <li>Connect your Ethereum wallet (MetaMask)</li>
+                <li>Hold ENS tokens or have delegated voting power</li>
+                <li>Sign the transaction to cast your vote</li>
+            </ol>
+            <p><strong>Your vote will be recorded on-chain and is permanent.</strong></p>
+            <div class="modal-buttons">
+                <button class="modal-btn modal-btn-secondary" onclick="hideContextModal()">Cancel</button>
+                <button class="modal-btn modal-btn-primary" onclick="connectAndVote()">Connect Wallet</button>
+            </div>
+        </div>
+    </div>
+
     <script>
         const API = 'https://gateful.up.railway.app';
         let currentAccount = null;
         let provider = null;
+        let pendingVote = null; // Store vote details when showing modal
+        let web3Modal;
+        let ethersProvider;
+        
+        // Initialize Web3Modal
+        function initWeb3Modal() {
+            const providerOptions = {
+                walletconnect: {
+                    package: WalletConnectProvider.default,
+                    options: {
+                        rpc: {
+                            1: "https://eth.llamarpc.com"
+                        }
+                    }
+                }
+            };
+            
+            web3Modal = new Web3Modal.default({
+                cacheProvider: false,
+                providerOptions,
+                disableInjectedProvider: false
+            });
+        }
         
         async function connectWallet() {
-            if (!window.ethereum) { alert('Please install MetaMask to use voting features'); return; }
             try {
-                const accounts = await ethereum.request({ method: 'eth_requestAccounts' });
-                currentAccount = accounts[0];
-                provider = window.ethereum;
+                if (!web3Modal) initWeb3Modal();
+                
+                const instance = await web3Modal.connect();
+                ethersProvider = new ethers.providers.Web3Provider(instance);
+                const signer = ethersProvider.getSigner();
+                currentAccount = await signer.getAddress();
+                provider = ethersProvider.provider;
+                
+                // Listen for account changes
+                instance.on("accountsChanged", (accounts) => {
+                    if (accounts.length > 0) {
+                        currentAccount = accounts[0];
+                        updateWalletUI();
+                    } else {
+                        currentAccount = null;
+                        provider = null;
+                        updateWalletUI();
+                    }
+                });
+                
+                // Listen for disconnect
+                instance.on("disconnect", () => {
+                    currentAccount = null;
+                    provider = null;
+                    updateWalletUI();
+                });
+                
                 updateWalletUI();
             } catch (err) {
                 console.error('Failed to connect wallet:', err);
-                alert('Wallet connection failed. Please try again.');
+                
+                // Fallback to demo mode if user cancels or no wallet available
+                if (confirm('Connection failed. Enable demo mode for testing?\n\n(Demo mode simulates wallet connection without real transactions)')) {
+                    currentAccount = '0x1234567890123456789012345678901234567890';
+                    provider = { demo: true };
+                    updateWalletUI();
+                }
             }
         }
         
@@ -242,15 +357,9 @@
             }
         }
         
-        if (window.ethereum) {
-            ethereum.request({ method: 'eth_accounts' })
-                .then(accounts => {
-                    if (accounts.length > 0) { currentAccount = accounts[0]; provider = window.ethereum; }
-                    updateWalletUI();
-                })
-                .catch(err => { console.error('Failed to check wallet:', err); updateWalletUI(); });
-            ethereum.on('accountsChanged', (accounts) => { currentAccount = accounts[0] || null; updateWalletUI(); });
-        } else { updateWalletUI(); }
+        // Initialize Web3Modal on page load
+        initWeb3Modal();
+        updateWalletUI();
         
         function fmt(num) {
             const n = parseFloat(num || 0) / 1e18;
@@ -310,22 +419,45 @@
         }
         
         async function vote(proposalId, support) {
-            if (!currentAccount || !provider) { alert('Please connect your wallet first'); return; }
+            // If wallet not connected, show modal first
+            if (!currentAccount || !provider) {
+                showContextModal(proposalId, support);
+                return;
+            }
+            
             const buttons = document.querySelectorAll('.vote-btn');
             buttons.forEach(btn => { btn.disabled = true; btn.style.opacity = '0.6'; btn.style.cursor = 'not-allowed'; });
             const originalText = event.target.textContent;
             event.target.textContent = 'Submitting vote...';
+            
+            // Demo mode - simulate vote without real transaction
+            if (provider.demo) {
+                setTimeout(() => {
+                    const voteType = support === 1 ? 'FOR' : support === 0 ? 'AGAINST' : 'ABSTAIN';
+                    alert(`✅ Demo Vote Cast: ${voteType}\n\n(Demo mode - no real transaction sent)\n\nIn production, your vote would be recorded on-chain and visible to all.`);
+                    buttons.forEach(btn => { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; });
+                    event.target.textContent = originalText;
+                }, 1500); // Simulate network delay
+                return;
+            }
+            
             try {
+                const signer = ethersProvider.getSigner();
+                const governorAddress = '0x323a76393544d5ecca80cd6ef2a560c6a395b7e3';
                 const methodId = '0x56781388';
                 const encodedId = proposalId.slice(2).padStart(64, '0');
                 const encodedSupport = support.toString(16).padStart(64, '0');
                 const data = methodId + encodedId + encodedSupport;
-                const tx = await provider.request({
-                    method: 'eth_sendTransaction',
-                    params: [{ from: currentAccount, to: '0x323a76393544d5ecca80cd6ef2a560c6a395b7e3', data: data }]
+                
+                // Create transaction
+                const tx = await signer.sendTransaction({
+                    to: governorAddress,
+                    data: data
                 });
-                alert('Vote submitted! TX: ' + tx);
-                setTimeout(() => showDetail(proposalId), 3000);
+                
+                alert('Vote submitted! TX: ' + tx.hash);
+                await tx.wait(); // Wait for confirmation
+                setTimeout(() => showDetail(proposalId), 1000);
             } catch (error) {
                 console.error('Vote error:', error);
                 let errorMsg = 'Vote failed. ';
@@ -336,6 +468,28 @@
                 alert(errorMsg);
                 buttons.forEach(btn => { btn.disabled = false; btn.style.opacity = '1'; btn.style.cursor = 'pointer'; });
                 event.target.textContent = originalText;
+            }
+        }
+        
+        function showContextModal(proposalId, support) {
+            pendingVote = { proposalId, support };
+            document.getElementById('context-modal').classList.add('show');
+        }
+        
+        function hideContextModal() {
+            pendingVote = null;
+            document.getElementById('context-modal').classList.remove('show');
+        }
+        
+        async function connectAndVote() {
+            hideContextModal();
+            await connectWallet();
+            
+            // If connection successful and we have a pending vote, proceed
+            if (currentAccount && pendingVote) {
+                const { proposalId, support } = pendingVote;
+                pendingVote = null;
+                await vote(proposalId, support);
             }
         }
         
@@ -431,7 +585,7 @@
                 const pct = calcPercentages(p.forVotes, p.againstVotes, p.abstainVotes);
                 
                 let voteButtonsHtml = '';
-                if (currentAccount && p.status === 'ACTIVE') {
+                if (p.status === 'ACTIVE') {
                     voteButtonsHtml = `
                         <div class="vote-buttons">
                             <button class="vote-btn vote-btn-for" onclick="vote('${p.id}', 1)">Vote For</button>
