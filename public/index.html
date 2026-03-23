@@ -352,8 +352,12 @@
             }
         }
         
-        // Initialize UI on page load (but don't connect yet)
-        updateWalletUI();
+        // Initialize UI when DOM is ready
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', updateWalletUI);
+        } else {
+            updateWalletUI();
+        }
         
         function fmt(num) {
             const n = parseFloat(num || 0) / 1e18;
