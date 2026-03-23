@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ENS Governance</title>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
-    <script src="https://unpkg.com/@walletconnect/ethereum-provider@2.11.2/dist/index.umd.js" crossorigin></script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -285,76 +284,60 @@
         
         async function connectWallet() {
             try {
-                // Check if MetaMask is available
-                if (window.ethereum) {
-                    // Use MetaMask/injected provider
-                    const instance = window.ethereum;
-                    await instance.request({ method: 'eth_requestAccounts' });
-                    
-                    ethersProvider = new ethers.providers.Web3Provider(instance);
-                    const signer = ethersProvider.getSigner();
-                    currentAccount = await signer.getAddress();
-                    provider = instance;
-                    
-                    // Listen for account changes
-                    instance.on("accountsChanged", (accounts) => {
-                        if (accounts.length > 0) {
-                            currentAccount = accounts[0];
-                            updateWalletUI();
-                        } else {
-                            currentAccount = null;
-                            provider = null;
-                            updateWalletUI();
-                        }
-                    });
-                    
-                    updateWalletUI();
-                } else {
-                    // No injected wallet - use WalletConnect v2
-                    if (!window.EthereumProvider) {
-                        throw new Error('WalletConnect not available');
+                // Simple direct connection like scaffold-eth
+                if (!window.ethereum) {
+                    alert('Please install MetaMask or another Web3 wallet!\n\nVisit: https://metamask.io')
+                    // Offer demo mode
+                    if (confirm('No wallet detected. Enable demo mode for testing?')) {
+                        currentAccount = '0x1234567890123456789012345678901234567890'
+                        provider = { demo: true }
+                        updateWalletUI()
                     }
-                    
-                    const wcProvider = await window.EthereumProvider.init({
-                        projectId: 'c4f79cc821944d9680842e34466bfb', // Public project ID
-                        chains: [1], // Ethereum mainnet
-                        showQrModal: true,
-                        optionalChains: [1],
-                        rpcMap: {
-                            1: "https://eth.llamarpc.com"
-                        },
-                        metadata: {
-                            name: 'ENS Governance',
-                            description: 'Vote on ENS proposals',
-                            url: 'https://immutablevote.clophorse.eth.limo',
-                            icons: []
-                        }
-                    });
-                    
-                    await wcProvider.enable();
-                    
-                    ethersProvider = new ethers.providers.Web3Provider(wcProvider);
-                    const signer = ethersProvider.getSigner();
-                    currentAccount = await signer.getAddress();
-                    provider = wcProvider;
-                    
-                    // Listen for disconnect
-                    wcProvider.on("disconnect", () => {
-                        currentAccount = null;
-                        provider = null;
-                        updateWalletUI();
-                    });
-                    
-                    updateWalletUI();
+                    return
                 }
-            } catch (err) {
-                console.error('Failed to connect wallet:', err);
                 
-                // Fallback to demo mode if user cancels or error
-                if (confirm('Connection failed. Enable demo mode for testing?\n\n(Demo mode simulates wallet connection without real transactions)')) {
-                    currentAccount = '0x1234567890123456789012345678901234567890';
-                    provider = { demo: true };
-                    updateWalletUI();
+                // Request accounts
+                const accounts = await window.ethereum.request({ 
+                    method: 'eth_requestAccounts' 
+                })
+                
+                if (accounts.length === 0) {
+                    throw new Error('No accounts returned')
+                }
+                
+                // Set up provider
+                ethersProvider = new ethers.providers.Web3Provider(window.ethereum)
+                currentAccount = accounts[0]
+                provider = window.ethereum
+                
+                // Listen for account changes
+                window.ethereum.on('accountsChanged', (accounts) => {
+                    if (accounts.length > 0) {
+                        currentAccount = accounts[0]
+                        ethersProvider = new ethers.providers.Web3Provider(window.ethereum)
+                        updateWalletUI()
+                    } else {
+                        currentAccount = null
+                        provider = null
+                        updateWalletUI()
+                    }
+                })
+                
+                // Listen for chain changes
+                window.ethereum.on('chainChanged', () => {
+                    window.location.reload()
+                })
+                
+                updateWalletUI()
+                
+            } catch (err) {
+                console.error('Failed to connect wallet:', err)
+                
+                // User rejected or other error
+                if (err.code === 4001) {
+                    alert('Connection rejected. Please approve the connection request.')
+                } else {
+                    alert(`Connection failed: ${err.message}`)
                 }
             }
         }
