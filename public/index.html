@@ -5,6 +5,50 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>ENS Governance</title>
     <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <script type="module">
+        import { createWeb3Modal, defaultConfig } from 'https://esm.sh/@web3modal/ethers5@3.5.7'
+        
+        const projectId = 'c4f79cc821944d9680842e34466bfb'
+        
+        const mainnet = {
+            chainId: 1,
+            name: 'Ethereum',
+            currency: 'ETH',
+            explorerUrl: 'https://etherscan.io',
+            rpcUrl: 'https://eth.llamarpc.com'
+        }
+        
+        const metadata = {
+            name: 'ENS Governance',
+            description: 'Vote on ENS proposals',
+            url: 'https://immutablevote.clophorse.eth.limo',
+            icons: []
+        }
+        
+        const ethersConfig = defaultConfig({
+            metadata,
+            enableEIP6963: true,
+            enableInjected: true,
+            enableCoinbase: true,
+            rpcUrl: 'https://eth.llamarpc.com',
+            defaultChainId: 1
+        })
+        
+        const modal = createWeb3Modal({
+            ethersConfig,
+            chains: [mainnet],
+            projectId,
+            enableAnalytics: false
+        })
+        
+        window.web3Modal = modal
+        
+        modal.subscribeProvider(({ provider, address }) => {
+            if (window.onWeb3ModalUpdate) {
+                window.onWeb3ModalUpdate(provider, address)
+            }
+        })
+    </script>
     <style>
         body {
             font-family: Arial, sans-serif;
@@ -282,63 +326,30 @@
         let pendingVote = null; // Store vote details when showing modal
         let ethersProvider;
         
+        window.onWeb3ModalUpdate = function(walletProvider, address) {
+            if (walletProvider && address) {
+                ethersProvider = new ethers.providers.Web3Provider(walletProvider)
+                currentAccount = address
+                provider = walletProvider
+                updateWalletUI()
+            } else {
+                currentAccount = null
+                provider = null
+                ethersProvider = null
+                updateWalletUI()
+            }
+        }
+        
         async function connectWallet() {
             try {
-                // Simple direct connection like scaffold-eth
-                if (!window.ethereum) {
-                    alert('Please install MetaMask or another Web3 wallet!\n\nVisit: https://metamask.io')
-                    // Offer demo mode
-                    if (confirm('No wallet detected. Enable demo mode for testing?')) {
-                        currentAccount = '0x1234567890123456789012345678901234567890'
-                        provider = { demo: true }
-                        updateWalletUI()
-                    }
-                    return
-                }
-                
-                // Request accounts
-                const accounts = await window.ethereum.request({ 
-                    method: 'eth_requestAccounts' 
-                })
-                
-                if (accounts.length === 0) {
-                    throw new Error('No accounts returned')
-                }
-                
-                // Set up provider
-                ethersProvider = new ethers.providers.Web3Provider(window.ethereum)
-                currentAccount = accounts[0]
-                provider = window.ethereum
-                
-                // Listen for account changes
-                window.ethereum.on('accountsChanged', (accounts) => {
-                    if (accounts.length > 0) {
-                        currentAccount = accounts[0]
-                        ethersProvider = new ethers.providers.Web3Provider(window.ethereum)
-                        updateWalletUI()
-                    } else {
-                        currentAccount = null
-                        provider = null
-                        updateWalletUI()
-                    }
-                })
-                
-                // Listen for chain changes
-                window.ethereum.on('chainChanged', () => {
-                    window.location.reload()
-                })
-                
-                updateWalletUI()
-                
-            } catch (err) {
-                console.error('Failed to connect wallet:', err)
-                
-                // User rejected or other error
-                if (err.code === 4001) {
-                    alert('Connection rejected. Please approve the connection request.')
+                if (window.web3Modal) {
+                    await window.web3Modal.open()
                 } else {
-                    alert(`Connection failed: ${err.message}`)
+                    throw new Error('Web3Modal not loaded')
                 }
+            } catch (err) {
+                console.error('Failed to open wallet modal:', err)
+                alert('Failed to open wallet selector. Please refresh and try again.')
             }
         }
         
